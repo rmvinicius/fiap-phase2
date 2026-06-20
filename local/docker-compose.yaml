@@ -16,6 +16,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 30s
     depends_on:
       auth-service-db:
         condition: service_healthy
