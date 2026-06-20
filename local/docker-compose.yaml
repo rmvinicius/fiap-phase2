@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  auth-service:
+    image: auth-service:1.0
+    container_name: auth-service
+    restart: always
+    environment:
+      DATABASE_URL: "postgres://auth_service:auth_service@2026@auth-service-db:5432/auth_db"
+      PORT: "8001"
+      MASTER_KEY: "admin-key@2026"
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      auth-service-db:
+        condition: service_healthy
+    networks:
+      - fase2
+      
+  auth-service-db:
+    image: auth-service-postgres:17
+    container_name: auth-service-db
+    restart: always
+    environment:
+      POSTGRES_USER: auth_service
+      POSTGRES_PASSWORD: auth_service@2026
+      POSTGRES_DB: auth_db
+    volumes:
+      - ./volume/postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_service -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - fase2
+
+networks:
+  fase2:
