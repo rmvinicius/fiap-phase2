@@ -1,6 +1,11 @@
-## Criação das databases localmente
+### auth-service
 
-# Base: auth-service
+# Desafios:
+
+1- Problema para realizar o a execução do go build
+  - Necessário comentar no go.mod algumas linhas, handlers.go e main.go
+
+## Criação de uma database local
 
 # Build do postgres
 
@@ -34,3 +39,18 @@ psql -h localhost -p 5440 -U auth_service -d auth_db -f ./db/init.sql
 ## Build da imagem do serviço auth-service
 
 docker build -t auth-service:1.0 .
+
+==============================
+
+### flag-service
+
+## Criação de uma database local
+
+# Build do postgres
+
+cd ./flag-service/db/Dockerfile
+docker build -t flag-service-postgres:17 .
+
+## Build da imagem do serviço flag-service
+
+docker build -t flag-service:1.0 .
