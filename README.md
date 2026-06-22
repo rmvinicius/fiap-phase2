@@ -44,6 +44,10 @@ docker build -t auth-service:1.0 .
 
 ### flag-service
 
+# desafios
+
+Necessário adicionar Werkzeug==2.2.3 no requirements.txt, pois esta falhando para iniciar a aplicação.
+
 ## Criação de uma database local
 
 # Build do postgres
