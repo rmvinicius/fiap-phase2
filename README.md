@@ -87,3 +87,31 @@ docker build -t targeting-service-postgres:17 .
 ## Build da imagem do serviço flag-service
 
 docker build -t targeting-service:1.0 .
+
+
+==============================
+
+### evaluation-service
+
+# desafios
+
+Necessário comentar:
+
+evaluator.go
+
+import (
+	//"context"
+  "os" // Adicionar
+
+erro:
+
+ > [builder 6/6] RUN CGO_ENABLED=0 GOOS=linux go build -o /evaluation-service .:
+7.298 # evaluation-service
+7.298 ./evaluator.go:4:2: "context" imported and not used
+7.298 ./evaluator.go:106:12: undefined: os
+7.298 ./evaluator.go:133:12: undefined: os
+
+
+## Build da imagem do serviço flag-service
+
+docker build -t evaluation-service:1.0 .

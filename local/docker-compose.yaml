@@ -128,5 +128,52 @@ services:
     networks:
       - fase2
 
+  evaluation-service:
+    image: evaluation-service:1.0
+    container_name: evaluation-service
+    restart: always
+    environment:
+      PORT: "8004"
+      REDIS_URL: "redis://redis:6379"
+      FLAG_SERVICE_URL: "http://flag-service:8002"
+      TARGETING_SERVICE_URL: "http://targeting-service:8003"
+      SERVICE_API_KEY: "tm_key_59f8679dad31f9f0cc03ee6f12d6214b07224d37abca178b2529681c7b893349"
+      AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/123456789012/sua-fila"
+      AWS_REGION: "us-east-1" 
+    ports:
+      - "8004:8004"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 45s
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      flag-service:
+        condition: service_healthy
+      targeting-service:
+        condition: service_healthy
+    networks:
+      - fase2
+
+  redis:
+    image: custom-redis:7.2
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - /home/vinicius.mendes/Docker/volumes/redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - fase2
+
 networks:
   fase2:
