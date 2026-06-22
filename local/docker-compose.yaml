@@ -54,10 +54,10 @@ services:
       - "8002:8002"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
-      interval: 10s
-      timeout: 5s
+      interval: 5s
+      timeout: 2s
       retries: 3
-      start_period: 60s
+      start_period: 45s
     depends_on:
       auth-service:
         condition: service_healthy
@@ -79,6 +79,49 @@ services:
       - ../flag-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U flag_service -d flags_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - fase2
+
+  targeting-service:
+    image: targeting-service:1.0
+    container_name: targeting-service
+    restart: always
+    environment:
+      DATABASE_URL: "postgres://targeting_service:targeting_service2026@targeting-service-db:5432/targeting_db"
+      PORT: "8003"
+      AUTH_SERVICE_URL: "http://auth-service:8001"
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 45s
+    depends_on:
+      auth-service:
+        condition: service_healthy
+    networks:
+      - fase2
+
+  targeting-service-db:
+    image: custom-postgres:17
+    container_name: targeting-service-db
+    restart: always
+    environment:
+      POSTGRES_USER: targeting_service
+      POSTGRES_PASSWORD: targeting_service2026
+      POSTGRES_DB: targeting_db
+    ports:
+      - "5441:5432"
+    volumes:
+      - /home/vinicius.mendes/Docker/volumes/targeting_db:/var/lib/postgresql/data
+      - ../targeting-service/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U targeting_service -d targeting_db"]
       interval: 10s
       timeout: 5s
       retries: 3
