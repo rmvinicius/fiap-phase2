@@ -139,6 +139,7 @@ services:
       TARGETING_SERVICE_URL: "http://targeting-service:8003"
       SERVICE_API_KEY: "tm_key_59f8679dad31f9f0cc03ee6f12d6214b07224d37abca178b2529681c7b893349"
       AWS_SQS_URL: "http://elasticmq:9324/000000000000/queue-toggle-master"
+      AWS_SQS_ENDPOINT: "http://elasticmq:9324"
       AWS_REGION: "us-east-1"
       AWS_ACCESS_KEY_ID: "local"
       AWS_SECRET_ACCESS_KEY: "local"
@@ -151,6 +152,8 @@ services:
       retries: 3
       start_period: 45s
     depends_on:
+      redis:
+        condition: service_healthy
       auth-service:
         condition: service_healthy
       flag-service:
@@ -210,6 +213,7 @@ services:
     networks:
       - fase2
 
+  #https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBLocal.DownloadingAndRunning.html
   dynamodb:
     image: custom-dynamodb:3.3.0
     container_name: dynamodb
