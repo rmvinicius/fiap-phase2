@@ -138,8 +138,10 @@ services:
       FLAG_SERVICE_URL: "http://flag-service:8002"
       TARGETING_SERVICE_URL: "http://targeting-service:8003"
       SERVICE_API_KEY: "tm_key_59f8679dad31f9f0cc03ee6f12d6214b07224d37abca178b2529681c7b893349"
-      AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/123456789012/sua-fila"
-      AWS_REGION: "us-east-1" 
+      AWS_SQS_URL: "http://elasticmq:9324/000000000000/queue-toggle-master"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "local"
+      AWS_SECRET_ACCESS_KEY: "local"
     ports:
       - "8004:8004"
     healthcheck:
@@ -154,6 +156,8 @@ services:
       flag-service:
         condition: service_healthy
       targeting-service:
+        condition: service_healthy
+      elasticmq:
         condition: service_healthy
     networks:
       - fase2
@@ -172,6 +176,75 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+    networks:
+      - fase2
+
+  analytics-service:
+    image: analytics-service:1.0
+    container_name: analytics-service
+    restart: always
+    environment:
+      PORT: "8005"
+      AWS_SQS_URL: "http://elasticmq:9324/000000000000/queue-toggle-master"
+      AWS_SQS_ENDPOINT: "http://elasticmq:9324"
+      AWS_DYNAMODB_TABLE: "ToggleMasterAnalytics"
+      AWS_DYNAMODB_ENDPOINT: "http://dynamodb:8000"
+      AWS_REGION: "us-east-1"
+      AWS_ACCESS_KEY_ID: "local"
+      AWS_SECRET_ACCESS_KEY: "local"
+    ports:
+      - "8005:8005"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 45s
+    depends_on:
+      dynamodb:
+        condition: service_healthy
+      evaluation-service:
+        condition: service_healthy
+      elasticmq:
+        condition: service_healthy
+    networks:
+      - fase2
+
+  dynamodb:
+    image: custom-dynamodb:3.3.0
+    container_name: dynamodb
+    restart: always
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    volumes:
+      - /home/vinicius.mendes/Docker/volumes/dynamodb:/home/dynamodblocal/data
+    working_dir: /home/dynamodblocal
+    healthcheck:
+      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/8000 || exit 1"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 5s
+    networks:
+      - fase2
+
+  #https://oneuptime.com/blog/post/2026-02-08-how-to-run-amazon-sqs-compatible-elasticmq-in-docker/view    
+  elasticmq:
+    image: custom-elasticmq:1.7.1
+    container_name: elasticmq
+    restart: always
+    ports:
+      - "9324:9324"
+      - "9325:9325"
+    volumes:
+      - /home/vinicius.mendes/Docker/volumes/elasticmq.conf:/opt/elasticmq.conf
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9324/health"]
+      interval: 5s
+      timeout: 2s
+      retries: 3
+      start_period: 30s
     networks:
       - fase2
 

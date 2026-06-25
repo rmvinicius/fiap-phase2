@@ -1,8 +1,41 @@
+# STAGE BUILD
+FROM python:3.11-slim AS builder
 
-EXPORT AWS_REGION
-AWS_SQS_URL
-AWS_DYNAMODB_TABLE
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-pip install -r requirements.txt
+WORKDIR /app
 
-gunicorn --bind 0.0.0.0:8005 app:app
+COPY requirements.txt .
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+RUN python -m venv /opt/venv
+
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+#STAGE RUN
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /app
+
+COPY --from=builder /opt/venv /opt/venv
+
+COPY app.py .
+
+RUN apt-get update && apt-get install -y curl
+
+RUN useradd -u 8888 analytics-service && chown -R analytics-service:analytics-service /app
+
+USER analytics-service
+
+EXPOSE 8005
+
+CMD ["gunicorn", "--bind", "0.0.0.0:8005", "app:app"]

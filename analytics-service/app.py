@@ -20,7 +20,9 @@ load_dotenv()
 # --- Configuração ---
 AWS_REGION = os.getenv("AWS_REGION")
 SQS_QUEUE_URL = os.getenv("AWS_SQS_URL")
+SQS_ENDPOINT = os.getenv("AWS_SQS_ENDPOINT")
 DYNAMODB_TABLE_NAME = os.getenv("AWS_DYNAMODB_TABLE")
+DYNAMODB_ENDPOINT = os.getenv("AWS_DYNAMODB_ENDPOINT")
 
 if not all([AWS_REGION, SQS_QUEUE_URL, DYNAMODB_TABLE_NAME]):
     log.critical("Erro: AWS_REGION, AWS_SQS_URL, e AWS_DYNAMODB_TABLE devem ser definidos.")
@@ -30,8 +32,14 @@ if not all([AWS_REGION, SQS_QUEUE_URL, DYNAMODB_TABLE_NAME]):
 # Criamos a sessão uma vez
 try:
     session = boto3.Session(region_name=AWS_REGION)
-    sqs_client = session.client("sqs")
-    dynamodb_client = session.client("dynamodb")
+    dynamodb_kwargs = {"region_name": AWS_REGION}
+    sqs_kwargs = {"region_name": AWS_REGION}
+    if SQS_ENDPOINT:
+        sqs_kwargs["endpoint_url"] = SQS_ENDPOINT
+    sqs_client = session.client("sqs", **sqs_kwargs)
+    if DYNAMODB_ENDPOINT:
+        dynamodb_kwargs["endpoint_url"] = DYNAMODB_ENDPOINT
+    dynamodb_client = session.client("dynamodb", **dynamodb_kwargs)
     log.info(f"Clientes Boto3 inicializados na região {AWS_REGION}")
 except NoCredentialsError:
     log.critical("Credenciais da AWS não encontradas. Verifique seu ambiente.")
@@ -39,7 +47,7 @@ except NoCredentialsError:
 except Exception as e:
     log.critical(f"Erro ao inicializar o Boto3: {e}")
     sys.exit(1)
-
+    
 
 # --- SQS Worker ---
 

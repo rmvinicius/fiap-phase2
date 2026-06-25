@@ -115,3 +115,45 @@ erro:
 ## Build da imagem do serviço flag-service
 
 docker build -t evaluation-service:1.0 .
+
+==============================
+
+### analytics-service
+
+# desafios
+
+  File "/app/app.py", line 10, in <module>
+    from flask import Flask, jsonify
+  File "/opt/venv/lib/python3.11/site-packages/flask/__init__.py", line 5, in <module>
+    from .app import Flask as Flask
+  File "/opt/venv/lib/python3.11/site-packages/flask/app.py", line 30, in <module>
+    from werkzeug.urls import url_quote
+ImportError: cannot import name 'url_quote' from 'werkzeug.urls' (/opt/venv/lib/python3.11/site-packages/werkzeug/urls.py)
+[2026-06-25 15:25:07 +0000] [7] [INFO] Worker exiting (pid: 7)
+[2026-06-25 15:25:07 +0000] [1] [INFO] Shutting down: Master
+[2026-06-25 15:25:07 +0000] [1] [INFO] Reason: Worker failed to boot.
+
+Necessário adicionar Werkzeug==2.2.3 no requirements.txt, pois esta falhando para iniciar a aplicação.
+
+
+Para realizar testes localmente com uma fila sqs e dynamodb, utilizei via docker o elasticmq
+
+foi necessário ajustar algumas linhas no app.py:
+
+try:
+    session = boto3.Session(region_name=AWS_REGION)
+    dynamodb_kwargs = {"region_name": AWS_REGION}
+    sqs_kwargs = {"region_name": AWS_REGION}
+    if SQS_ENDPOINT:
+        sqs_kwargs["endpoint_url"] = SQS_ENDPOINT
+    sqs_client = session.client("sqs", **sqs_kwargs)
+    if DYNAMODB_ENDPOINT:
+        dynamodb_kwargs["endpoint_url"] = DYNAMODB_ENDPOINT
+    dynamodb_client = session.client("dynamodb", **dynamodb_kwargs)
+    log.info(f"Clientes Boto3 inicializados na região {AWS_REGION}")
+except NoCredentialsError:
+    log.critical("Credenciais da AWS não encontradas. Verifique seu ambiente.")
+    sys.exit(1)
+except Exception as e:
+    log.critical(f"Erro ao inicializar o Boto3: {e}")
+    sys.exit(1)
