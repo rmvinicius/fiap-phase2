@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: auth-service-db-pv
+spec:
+  storageClassName: local-storage
+  #claimRef:
+  #  name: auth-service-db-pvc
+  #  namespace: fiap
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "/home/vinicius.mendes/Kubernetes/volumes/auth_db"
