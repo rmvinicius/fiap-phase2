@@ -1,0 +1,1 @@
+minikube image load custom-postgres:17

@@ -15,10 +15,60 @@ spec:
       labels:
         app: auth-service-db
     spec:
+      securityContext:
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
       containers:
       - name: auth-service-db
         image: custom-postgres:17
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+        #  readOnlyRootFilesystem: false
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        startupProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - auth_service
+              - -d
+              - auth_db
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 9
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - auth_service
+              - -d
+              - auth_db
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+              - "psql"
+              - "-w"
+              - "-U"
+              - "auth_service"
+              - "-d"
+              - "auth_db"
+              - "-c"
+              - "SELECT 1;"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
         ports:
         - containerPort: 5432
         env:
