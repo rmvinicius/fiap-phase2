@@ -1,26 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: auth-service-db
+  name: flag-service-db
   namespace: postgres
   labels:
-    app: auth-service-db
+    app: flag-service-db
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: auth-service-db
+      app: flag-service-db
   template:
     metadata:
       labels:
-        app: auth-service-db
+        app: flag-service-db
     spec:
       securityContext:
         runAsUser: 70
         runAsGroup: 70
         fsGroup: 70
       containers:
-      - name: auth-service-db
+      - name: flag-service-db
         image: custom-postgres:17
         imagePullPolicy: IfNotPresent
         securityContext:
@@ -38,9 +38,9 @@ spec:
             command:
               - pg_isready
               - -U
-              - auth_service
+              - flag_service
               - -d
-              - auth_db
+              - flags_db
           initialDelaySeconds: 15
           periodSeconds: 10
           failureThreshold: 9
@@ -49,9 +49,9 @@ spec:
             command:
               - pg_isready
               - -U
-              - auth_service
+              - flag_service
               - -d
-              - auth_db
+              - flags_db
           initialDelaySeconds: 10
           periodSeconds: 20
           failureThreshold: 3
@@ -61,9 +61,9 @@ spec:
               - "psql"
               - "-w"
               - "-U"
-              - "auth_service"
+              - "flag_service"
               - "-d"
-              - "auth_db"
+              - "flags_db"
               - "-c"
               - "SELECT 1;"
           initialDelaySeconds: 5
@@ -76,17 +76,17 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: POSTGRES_DB
-              name: auth-service-configmap
+              name: flag-service-configmap
         - name: POSTGRES_USER
           valueFrom:
             configMapKeyRef:
               key: POSTGRES_USER
-              name: auth-service-configmap
+              name: flag-service-configmap
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               key: POSTGRES_PASSWORD
-              name: auth-service-db-secret
+              name: flag-service-db-secret
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
         volumeMounts:
@@ -95,5 +95,5 @@ spec:
       volumes:
       - name: postgres-data
         persistentVolumeClaim:
-          claimName: auth-service-db-pvc
+          claimName: flag-service-db-pvc
       restartPolicy: Always
