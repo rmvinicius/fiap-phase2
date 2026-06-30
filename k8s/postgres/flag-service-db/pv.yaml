@@ -6,11 +6,11 @@ spec:
   storageClassName: local-storage
   claimRef:
     name: flag-service-db-pvc
-    namespace: fiap
+    namespace: postgres
   capacity:
     storage: 2Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: "/home/vinicius.mendes/Kubernetes/volumes/flag_db"
+    path: "/mnt/volumes/flags_db"

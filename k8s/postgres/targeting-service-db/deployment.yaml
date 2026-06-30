@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: targeting-service-db
+  namespace: postgres
+  labels:
+    app: targeting-service-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: targeting-service-db
+  template:
+    metadata:
+      labels:
+        app: targeting-service-db
+    spec:
+      securityContext:
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
+      containers:
+      - name: targeting-service-db
+        image: custom-postgres:17
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+        #  readOnlyRootFilesystem: false
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        startupProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - targeting_service
+              - -d
+              - targeting_db
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 9
+        livenessProbe:
+          exec:
+            command:
+              - pg_isready
+              - -U
+              - targeting_service
+              - -d
+              - targeting_db
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+              - "psql"
+              - "-w"
+              - "-U"
+              - "targeting_service"
+              - "-d"
+              - "targeting_db"
+              - "-c"
+              - "SELECT 1;"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              key: POSTGRES_DB
+              name: targeting-service-configmap
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              key: POSTGRES_USER
+              name: targeting-service-configmap
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: POSTGRES_PASSWORD
+              name: targeting-service-db-secret
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+      volumes:
+      - name: postgres-data
+        persistentVolumeClaim:
+          claimName: targeting-service-db-pvc
+      restartPolicy: Always

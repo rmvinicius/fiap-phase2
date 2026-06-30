@@ -4,5 +4,5 @@ metadata:
   name: flag-service-configmap
   namespace: postgres
 data:
-  POSTGRES_DB: "flag_db"
+  POSTGRES_DB: "flags_db"
   POSTGRES_USER: "flag_service"
