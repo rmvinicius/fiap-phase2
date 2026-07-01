@@ -5,6 +5,7 @@ minikube image load custom-redis:7.2
 minikube image load custom-dynamodb:3.3.0
 minikube image load custom-elasticmq:1.7.1
 minikube image load auth-service:1.0
+minikube image load flag-service:1.0
 
 minikube mount /home/vinicius.mendes/Kubernetes/volumes/:/mnt/volumes
 
