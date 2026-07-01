@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: targeting-service-configmap
+  name: targeting-service-db-configmap
   namespace: postgres
 data:
   POSTGRES_DB: "targeting_db"

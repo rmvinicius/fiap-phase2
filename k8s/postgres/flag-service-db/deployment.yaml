@@ -76,12 +76,12 @@ spec:
           valueFrom:
             configMapKeyRef:
               key: POSTGRES_DB
-              name: flag-service-configmap
+              name: flag-service-db-configmap
         - name: POSTGRES_USER
           valueFrom:
             configMapKeyRef:
               key: POSTGRES_USER
-              name: flag-service-configmap
+              name: flag-service-db-configmap
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
