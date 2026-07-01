@@ -24,7 +24,7 @@ spec:
         image: custom-redis:7.2
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: true
+          allowPrivilegeEscalation: false
         #  readOnlyRootFilesystem: false
         resources:
           limits:

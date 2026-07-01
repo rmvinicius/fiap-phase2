@@ -18,3 +18,10 @@ metadata:
   name: dynamodb
   labels:
     name: dynamodb
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: elasticmq
+  labels:
+    name: elasticmq

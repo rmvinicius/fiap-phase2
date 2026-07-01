@@ -25,7 +25,7 @@ spec:
         command: ["java", "-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: true
+          allowPrivilegeEscalation: false
         #  readOnlyRootFilesystem: false
         resources:
           limits:

@@ -1,31 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dynamodb
-  namespace: dynamodb
+  name: elasticmq
+  namespace: elasticmq
   labels:
-    app: dynamodb
+    app: elasticmq
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: dynamodb
+      app: elasticmq
   template:
     metadata:
       labels:
-        app: dynamodb
+        app: elasticmq
     spec:
       #securityContext:
       #  runAsUser: 999
       #  runAsGroup: 1000
       #  fsGroup: 1000
       containers:
-      - name: dynamodb
-        image: custom-dynamodb:3.3.0
-        command: ["java", "-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+      - name: elasticmq
+        image: custom-elasticmq:1.7.1
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: true
+          allowPrivilegeEscalation: false
         #  readOnlyRootFilesystem: false
         resources:
           limits:
@@ -35,30 +34,48 @@ spec:
             cpu: "100m"
             memory: "256Mi"
         startupProbe:
-          tcpSocket:
-            port: 8000
+          exec:
+            command:
+              - wget
+              - --spider
+              - -q
+              - http://localhost:9324/health
           initialDelaySeconds: 15
           periodSeconds: 10
           failureThreshold: 9
         livenessProbe:
-          tcpSocket:
-            port: 8000
+          exec:
+            command:
+              - wget
+              - --spider
+              - -q
+              - http://localhost:9324/health
           initialDelaySeconds: 10
           periodSeconds: 20
           failureThreshold: 3
         readinessProbe:
-          tcpSocket:
-            port: 8000
+          exec:
+            command:
+              - wget
+              - --spider
+              - -q
+              - http://localhost:9324/health
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 3
         ports:
-        - containerPort: 8000
+        - name: sqs-port
+          containerPort: 9324
+          protocol: TCP
+        - name: http-port
+          containerPort: 9325
+          protocol: TCP
         volumeMounts:
-        - name: dynamodb-data
-          mountPath: /home/dynamodblocal/data
+        - name: elasticmq-data
+          mountPath: /opt/elasticmq.conf
+          subPath: elasticmq.conf
       volumes:
-      - name: dynamodb-data
+      - name: elasticmq-data
         persistentVolumeClaim:
-          claimName: dynamodb-pvc
+          claimName: elasticmq-pvc
       restartPolicy: Always

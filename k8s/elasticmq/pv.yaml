@@ -1,17 +1,17 @@
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: dynamodb-pv
+  name: elasticmq-pv
 spec:
   storageClassName: local-storage
   claimRef:
-    name: dynamodb-pvc
-    namespace: dynamodb
+    name: elasticmq-pvc
+    namespace: elasticmq
   capacity:
     storage: 2Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: "/mnt/volumes/dynamodb"
+    path: "/mnt/volumes/elasticmq"
     type: DirectoryOrCreate

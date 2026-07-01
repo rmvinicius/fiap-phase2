@@ -1,13 +1,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: dynamodb-svc
-  namespace: dynamodb
+  name: elasticmq-svc
+  namespace: elasticmq
 spec:
   type: ClusterIP
   selector:
-    app: dynamodb
+    app: elasticmq
   ports:
     - protocol: TCP
-      port: 8000
-      targetPort: 8000
+      name: sqs-port
+      port: 9324
+      targetPort: 9324
+    - protocol: TCP
+      name: http-port
+      port: 9325
+      targetPort: 9325
