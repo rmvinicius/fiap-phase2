@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: targeting-service
+  name: evaluation-service
   namespace: application
   labels:
-    app: targeting-service
+    app: evaluation-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: targeting-service
+      app: evaluation-service
   template:
     metadata:
       labels:
-        app: targeting-service
+        app: evaluation-service
     spec:
       #securityContext:
       #  runAsUser: 70
       #  runAsGroup: 70
       #  fsGroup: 70
       containers:
-      - name: targeting-service
-        image: targeting-service:1.0
+      - name: evaluation-service
+        image: evaluation-service:1.0
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
@@ -36,40 +36,75 @@ spec:
         startupProbe:
           httpGet:
             path: /health
-            port: 8003
+            port: 8004
           initialDelaySeconds: 15
           periodSeconds: 10
           failureThreshold: 9
         livenessProbe:
           httpGet:
             path: /health
-            port: 8003
+            port: 8004
           initialDelaySeconds: 10
           periodSeconds: 20
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /health
-            port: 8003
+            port: 8004
           initialDelaySeconds: 5
           periodSeconds: 10
           failureThreshold: 3
         ports:
-        - containerPort: 8003
+        - containerPort: 8004
         env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              key: DATABASE_URL
-              name: targeting-service-database-url-secret
         - name: PORT
           valueFrom:
             configMapKeyRef:
               key: PORT
-              name: targeting-service-configmap
-        - name: AUTH_SERVICE_URL
+              name: evaluation-service-configmap
+        - name: REDIS_URL
           valueFrom:
             configMapKeyRef:
-              key: AUTH_SERVICE_URL
-              name: targeting-service-configmap
+              key: REDIS_URL
+              name: evaluation-service-configmap
+        - name: FLAG_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: FLAG_SERVICE_URL
+              name: evaluation-service-configmap
+        - name: TARGETING_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: TARGETING_SERVICE_URL
+              name: evaluation-service-configmap
+        - name: AWS_SQS_URL
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_SQS_URL
+              name: evaluation-service-configmap
+        - name: AWS_SQS_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_SQS_ENDPOINT
+              name: evaluation-service-configmap
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_REGION
+              name: evaluation-service-configmap
+        - name: SERVICE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: SERVICE_API_KEY
+              name: evaluation-service-api-key-secret
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_ACCESS_KEY_ID
+              name: evaluation-service-aws-secret
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SECRET_ACCESS_KEY
+              name: evaluation-service-aws-secret
       restartPolicy: Always

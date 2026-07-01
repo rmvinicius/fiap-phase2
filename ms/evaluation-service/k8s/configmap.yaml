@@ -1,8 +1,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: targeting-service-configmap
+  name: evaluation-service-configmap
   namespace: application
 data:
-  AUTH_SERVICE_URL: "http://auth-service-svc.application.svc.cluster.local:8001"
-  PORT: "8003"
+  REDIS_URL: "redis://redis-svc.redis.svc.cluster.local:6379"
+  PORT: "8004"
+  FLAG_SERVICE_URL: "http://flag-service-svc.application.svc.cluster.local:8002"
+  TARGETING_SERVICE_URL: "http://targeting-service-svc.application.svc.cluster.local:8003"
+  AWS_SQS_URL: "http://elasticmq-svc.elasticmq.svc.cluster.local:9324/000000000000/queue-toggle-master"
+  AWS_SQS_ENDPOINT: "http://elasticmq-svc.elasticmq.svc.cluster.local:9324"
+  AWS_REGION: "us-east-1"

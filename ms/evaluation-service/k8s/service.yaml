@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: targeting-service-svc
+  name: evaluation-service-svc
   namespace: application
 spec:
   type: NodePort
   selector:
-    app: targeting-service
+    app: evaluation-service
   ports:
     - protocol: TCP
-      port: 8003
-      targetPort: 8003
-      nodePort: 30003
+      port: 8004
+      targetPort: 8004
+      nodePort: 30004
