@@ -11,3 +11,10 @@ metadata:
   name: redis
   labels:
     name: redis
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dynamodb
+  labels:
+    name: dynamodb

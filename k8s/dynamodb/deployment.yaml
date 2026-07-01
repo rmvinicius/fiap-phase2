@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynamodb
+  namespace: dynamodb
+  labels:
+    app: dynamodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dynamodb
+  template:
+    metadata:
+      labels:
+        app: dynamodb
+    spec:
+      #securityContext:
+      #  runAsUser: 999
+      #  runAsGroup: 1000
+      #  fsGroup: 1000
+      containers:
+      - name: dynamodb
+        image: custom-dynamodb:3.3.0
+        command: ["java", "-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "/home/dynamodblocal/data"]
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: true
+        #  readOnlyRootFilesystem: false
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        startupProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 9
+        livenessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: dynamodb-data
+          mountPath: /home/dynamodblocal/data
+      volumes:
+      - name: dynamodb-data
+        persistentVolumeClaim:
+          claimName: dynamodb-pvc
+      restartPolicy: Always
