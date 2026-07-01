@@ -24,7 +24,7 @@ spec:
         image: custom-postgres:17
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: false
+          allowPrivilegeEscalation: true
         #  readOnlyRootFilesystem: false
         resources:
           limits:

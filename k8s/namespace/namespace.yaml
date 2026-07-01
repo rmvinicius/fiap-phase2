@@ -4,3 +4,10 @@ metadata:
   name: postgres
   labels:
     name: postgres
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redis
+  labels:
+    name: redis

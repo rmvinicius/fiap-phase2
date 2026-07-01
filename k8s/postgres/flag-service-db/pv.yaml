@@ -14,3 +14,4 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   hostPath:
     path: "/mnt/volumes/flags_db"
+    type: DirectoryOrCreate
