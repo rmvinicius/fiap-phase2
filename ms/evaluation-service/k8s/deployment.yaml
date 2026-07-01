@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: targeting-service
+  namespace: application
+  labels:
+    app: targeting-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: targeting-service
+  template:
+    metadata:
+      labels:
+        app: targeting-service
+    spec:
+      #securityContext:
+      #  runAsUser: 70
+      #  runAsGroup: 70
+      #  fsGroup: 70
+      containers:
+      - name: targeting-service
+        image: targeting-service:1.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+        #  readOnlyRootFilesystem: false
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 9
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8003
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        ports:
+        - containerPort: 8003
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              key: DATABASE_URL
+              name: targeting-service-database-url-secret
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: targeting-service-configmap
+        - name: AUTH_SERVICE_URL
+          valueFrom:
+            configMapKeyRef:
+              key: AUTH_SERVICE_URL
+              name: targeting-service-configmap
+      restartPolicy: Always
