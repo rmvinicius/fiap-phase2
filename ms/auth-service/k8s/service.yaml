@@ -4,11 +4,10 @@ metadata:
   name: auth-service-svc
   namespace: application
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: auth-service
   ports:
     - protocol: TCP
       port: 8001
       targetPort: 8001
-      nodePort: 30001
