@@ -4,11 +4,10 @@ metadata:
   name: flag-service-svc
   namespace: application
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: flag-service
   ports:
     - protocol: TCP
       port: 8002
       targetPort: 8002
-      nodePort: 30002

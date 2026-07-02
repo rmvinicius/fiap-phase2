@@ -4,11 +4,10 @@ metadata:
   name: analytics-service-svc
   namespace: application
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: analytics-service
   ports:
     - protocol: TCP
       port: 8005
       targetPort: 8005
-      nodePort: 30005

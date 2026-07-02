@@ -4,11 +4,10 @@ metadata:
   name: evaluation-service-svc
   namespace: application
 spec:
-  type: NodePort
+  type: ClusterIP
   selector:
     app: evaluation-service
   ports:
     - protocol: TCP
       port: 8004
       targetPort: 8004
-      nodePort: 30004
