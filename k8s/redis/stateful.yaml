@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: redis
   namespace: redis
@@ -10,6 +10,7 @@ spec:
   selector:
     matchLabels:
       app: redis
+  serviceName: redis-svc
   template:
     metadata:
       labels:
@@ -66,4 +67,10 @@ spec:
       - name: redis-data
         persistentVolumeClaim:
           claimName: redis-pvc
+      - name: redis-config 
+        configMap:
+          name: redis-config
+          items:
+            - key: redis.conf
+              path: redis.conf
       restartPolicy: Always

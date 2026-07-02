@@ -4,11 +4,10 @@ metadata:
   name: redis-svc
   namespace: redis
 spec:
-  type: NodePort
+  clusterIP: None
   selector:
     app: redis
   ports:
     - protocol: TCP
       port: 6379
       targetPort: 6379
-      nodePort: 30379

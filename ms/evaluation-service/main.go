@@ -92,7 +92,7 @@ func main() {
 
 	// Cliente HTTP (com timeout)
 	httpClient := &http.Client{
-		Timeout: 5 * time.Second,
+		Timeout: 30 * time.Second,
 	}
 
 	// Cria a instância da App

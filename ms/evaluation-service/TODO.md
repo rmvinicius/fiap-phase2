@@ -35,3 +35,14 @@ evaluator.go
 import (
 	//"context"
   "os" // Adicionar
+
+Para testes via minikube, precisei aumentar o timeout para a requisição pro flag, que estava levando 6s localmente:
+
+	// Cliente HTTP (com timeout)
+	httpClient := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+Precisei alterar a imagem Dockerfile para o usuário evaluation-service, pois ao chamar a api do flags via service, nao conseguia resolver o dns interno, para isso, usei uma imagem debian de base.
+
+FROM debian:12-slim
