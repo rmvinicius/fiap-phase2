@@ -3,6 +3,7 @@ kind: Secret
 metadata:
   name: analytics-service-keda-secrets
   namespace: application
+type: Opaque
 data:
   AWS_ACCESS_KEY_ID: bG9jYWw=
   AWS_SECRET_ACCESS_KEY: bG9jYWw=

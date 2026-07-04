@@ -4,10 +4,10 @@ metadata:
   name: evaluation-service-configmap
   namespace: application
 data:
-  REDIS_URL: "redis://redis-0.redis-svc.redis.svc.cluster.local:6379"
+  REDIS_URL: "redis://clustercfg.redis-dev-01.chlpid.use1.cache.amazonaws.com:6379"
   PORT: "8004"
   FLAG_SERVICE_URL: "http://flag-service-svc.application.svc.cluster.local:8002"
   TARGETING_SERVICE_URL: "http://targeting-service-svc.application.svc.cluster.local:8003"
-  AWS_SQS_URL: "http://elasticmq-svc.elasticmq.svc.cluster.local:9324/000000000000/queue-toggle-master"
-  AWS_SQS_ENDPOINT: "http://elasticmq-svc.elasticmq.svc.cluster.local:9324"
+  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/076892642827/queue-toggle-master"
+  AWS_SQS_ENDPOINT: "https://sqs.us-east-1.amazonaws.com"
   AWS_REGION: "us-east-1"

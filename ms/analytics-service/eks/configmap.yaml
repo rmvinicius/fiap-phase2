@@ -5,8 +5,8 @@ metadata:
   namespace: application
 data:
   PORT: "8005"
-  AWS_SQS_URL: "http://elasticmq-svc.elasticmq.svc.cluster.local:9324/000000000000/queue-toggle-master"
-  AWS_SQS_ENDPOINT: "http://elasticmq-svc.elasticmq.svc.cluster.local:9324"
+  AWS_SQS_URL: "https://sqs.us-east-1.amazonaws.com/076892642827/queue-toggle-master"
+  AWS_SQS_ENDPOINT: "https://sqs.us-east-1.amazonaws.com"
   AWS_DYNAMODB_TABLE: "ToggleMasterAnalytics"
-  AWS_DYNAMODB_ENDPOINT: "http://dynamodb-svc.dynamodb.svc.cluster.local:8000"
+  #AWS_DYNAMODB_ENDPOINT: ""
   AWS_REGION: "us-east-1"

@@ -21,7 +21,7 @@ spec:
       #  fsGroup: 70
       containers:
       - name: flag-service
-        image: flag-service:1.0
+        image: 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flag-service:1.0
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

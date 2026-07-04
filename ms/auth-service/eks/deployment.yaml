@@ -21,7 +21,7 @@ spec:
       #  fsGroup: 70
       containers:
       - name: auth-service
-        image: 076892642827.dkr.ecr.us-east-1.amazonaws.com/auth-service:1.0
+        image: 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/auth-service:1.0
         imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false

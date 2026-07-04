@@ -3,9 +3,10 @@ kind: Secret
 metadata:
   name: analytics-service-keda-secrets
   namespace: application
+type: Opaque
 data:
-  AWS_ACCESS_KEY_ID: bG9jYWw=
-  AWS_SECRET_ACCESS_KEY: bG9jYWw=
+  AWS_ACCESS_KEY_ID: QVNJQVJEWlpJVFlGV1pXUFpBRFQ=
+  AWS_SECRET_ACCESS_KEY: K2hJKzRHZEdzakxzUEZtQWJvTENLR2hPMkN5SlhCSGZQdVNHS2hMag==
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
@@ -39,7 +40,7 @@ spec:
     authenticationRef:
       name: analytics-service-keda-trigger-auth-aws-credentials
     metadata:
-      queueURL: http://elasticmq-svc.elasticmq.svc.cluster.local:9324/000000000000/queue-toggle-master
+      queueURL: https://sqs.us-east-1.amazonaws.com/076892642827/queue-toggle-master
       queueLength: "5"
       awsRegion: "us-east-1"
-      awsEndpoint: http://elasticmq-svc.elasticmq.svc.cluster.local:9324
+      awsEndpoint: https://sqs.us-east-1.amazonaws.com
