@@ -89,3 +89,18 @@ docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/analytics
 docker build -t toggle-master/evaluation-service:1.0 .
 docker tag toggle-master/evaluation-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/evaluation-service:1.0
 docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/evaluation-service:1.0
+
+# Aplicação dos scripts sql nas bases
+
+psql "host=$RDSHOST01 port=5432 dbname=auth_db user=auth_service" -f init.sql
+psql "host=$RDSHOST02 port=5432 dbname=flags_db user=flag_service" -f init.sql
+psql "host=$RDSHOST03 port=5432 dbname=targeting_db user=targeting_service" -f init.sql
+
+# Configurar ECR no EKS
+aws eks update-kubeconfig --region us-east-1 --name eks-dev-01
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 076892642827.dkr.ecr.us-east-1.amazonaws.com
+kubectl create secret docker-registry ecr-secret --docker-server=076892642827.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password --region us-east-1)
+
+# Aplicar deployments do cluster
+kubectl apply -f eks/deployment.yaml
+kubectl apply -f eks/service.yaml
