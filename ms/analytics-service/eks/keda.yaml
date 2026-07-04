@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: analytics-service-keda-secrets
+  namespace: application
+data:
+  AWS_ACCESS_KEY_ID: bG9jYWw=
+  AWS_SECRET_ACCESS_KEY: bG9jYWw=
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: analytics-service-keda-trigger-auth-aws-credentials
+  namespace: application
+spec:
+  secretTargetRef:
+  - parameter: awsAccessKeyID
+    name: analytics-service-keda-secrets
+    key: AWS_ACCESS_KEY_ID
+  - parameter: awsSecretAccessKey
+    name: analytics-service-keda-secrets
+    key: AWS_SECRET_ACCESS_KEY
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: analytics-service-keda-sqs-scale
+  namespace: application
+spec:
+  scaleTargetRef:
+    kind: Deployment
+    name: analytics-service
+  minReplicaCount: 0
+  maxReplicaCount: 5
+  cooldownPeriod:  30
+  pollingInterval: 10
+  triggers:
+  - type: aws-sqs-queue
+    authenticationRef:
+      name: analytics-service-keda-trigger-auth-aws-credentials
+    metadata:
+      queueURL: http://elasticmq-svc.elasticmq.svc.cluster.local:9324/000000000000/queue-toggle-master
+      queueLength: "5"
+      awsRegion: "us-east-1"
+      awsEndpoint: http://elasticmq-svc.elasticmq.svc.cluster.local:9324

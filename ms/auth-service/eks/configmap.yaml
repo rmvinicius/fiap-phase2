@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-configmap
+  namespace: application
+data:
+  PORT: "8001"

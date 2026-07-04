@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+  namespace: application
+  labels:
+    app: analytics-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      #securityContext:
+      #  runAsUser: 70
+      #  runAsGroup: 70
+      #  fsGroup: 70
+      containers:
+      - name: analytics-service
+        image: analytics-service:1.0
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+        #  readOnlyRootFilesystem: false
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          failureThreshold: 9
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8005
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        ports:
+        - containerPort: 8005
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              key: PORT
+              name: analytics-service-configmap
+        - name: AWS_SQS_URL
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_SQS_URL
+              name: analytics-service-configmap
+        - name: AWS_SQS_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_SQS_ENDPOINT
+              name: analytics-service-configmap
+        - name: AWS_DYNAMODB_TABLE
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_DYNAMODB_TABLE
+              name: analytics-service-configmap
+        - name: AWS_DYNAMODB_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_DYNAMODB_ENDPOINT
+              name: analytics-service-configmap
+        - name: AWS_REGION
+          valueFrom:
+            configMapKeyRef:
+              key: AWS_REGION
+              name: analytics-service-configmap
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              key: AWS_ACCESS_KEY_ID
+              name: analytics-service-aws-secret
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SECRET_ACCESS_KEY
+              name: analytics-service-aws-secret
+      restartPolicy: Always
