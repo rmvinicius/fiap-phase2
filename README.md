@@ -19,7 +19,7 @@
 
 1- Na VM que será utilizada para administrar o cluster, foi obtido as credenciais da aws pelo lab, acessando o arquivo ~/.aws/credentials
 2- Configurado na VM as credenciais através do comando aws configure
-3- Configurado a conexão no cluster através do comando: aws eks update-kubeconfig --region us-east-1 --name eks-dev-01
+3- Configurado a conexão no cluster através do comando: aws eks update-kubeconfig --region us-east-1 --name eks-dev
 
 ## Configuração do postgres
 
@@ -78,9 +78,9 @@ docker build -t toggle-master/targeting-service:1.0 .
 docker tag toggle-master/targeting-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/targeting-service:1.0
 docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/targeting-service:1.0
 
-docker build -t toggle-master/flags-service:1.0 .
-docker tag toggle-master/flags-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flags-service:1.0
-docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flags-service:1.0
+docker build -t toggle-master/flag-service:1.0 .
+docker tag toggle-master/flag-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flag-service:1.0
+docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flag-service:1.0
 
 docker build -t toggle-master/analytics-service:1.0 .
 docker tag toggle-master/analytics-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/analytics-service:1.0
