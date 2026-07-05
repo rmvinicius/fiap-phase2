@@ -4,7 +4,6 @@ metadata:
   name: evaluation-service-configmap
   namespace: application
 data:
-  REDIS_URL: "redis://clustercfg.redis-dev-01.chlpid.use1.cache.amazonaws.com:6379"
   PORT: "8004"
   FLAG_SERVICE_URL: "http://flag-service-svc.application.svc.cluster.local:8002"
   TARGETING_SERVICE_URL: "http://targeting-service-svc.application.svc.cluster.local:8003"

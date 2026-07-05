@@ -64,9 +64,9 @@ spec:
               name: evaluation-service-configmap
         - name: REDIS_URL
           valueFrom:
-            configMapKeyRef:
+            secretKeyRef:
               key: REDIS_URL
-              name: evaluation-service-configmap
+              name: evaluation-service-redis-secret
         - name: FLAG_SERVICE_URL
           valueFrom:
             configMapKeyRef:
