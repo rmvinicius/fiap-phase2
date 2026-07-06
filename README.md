@@ -116,3 +116,14 @@ Connection string:
 
 echo -n "rediss://redis-dev-01-chlpid.serverless.use1.cache.amazonaws.com:6379" | base64
 
+
+
+# checklist
+
+1- Subir nat gateway
+2- Subir o node no eks
+3- Provisionar redis do tipo redis-oss nome: redis-dev-01
+4- Subir o ingress no eks
+5- Atualizar as credenciais da aws nas secrets dos ms e keda
+6- Ativar postgres
+
