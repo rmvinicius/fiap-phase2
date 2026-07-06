@@ -44,7 +44,6 @@ spec:
     authenticationRef:
       name: analytics-service-keda-trigger-auth-aws-credentials
     metadata:
-      queueURL: https://sqs.us-east-1.amazonaws.com/076892642827/queue-toggle-master
+      queueURL: queue-toggle-master
       queueLength: "5"
       awsRegion: "us-east-1"
-      awsEndpoint: https://sqs.us-east-1.amazonaws.com
