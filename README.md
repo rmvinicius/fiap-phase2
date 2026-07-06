@@ -104,3 +104,15 @@ kubectl create secret docker-registry ecr-secret --docker-server=076892642827.dk
 # Aplicar deployments do cluster
 kubectl apply -f eks/deployment.yaml
 kubectl apply -f eks/service.yaml
+
+# Configurar redis
+
+Criado redis do tipo Redis OSS
+Necessário criar um usuário para acesso
+toggle-master:toggle-master123
+
+## Configurar credenciais no Kubernetes
+Connection string:
+
+echo -n "redis://toggle-master:toggle-master123@master.redis-dev.chlpid.use1.cache.amazonaws.com:6379" | base64
+
