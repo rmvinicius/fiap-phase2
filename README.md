@@ -114,5 +114,5 @@ toggle-master:toggle-master123
 ## Configurar credenciais no Kubernetes
 Connection string:
 
-echo -n "redis://toggle-master:toggle-master123@master.redis-dev.chlpid.use1.cache.amazonaws.com:6379" | base64
+echo -n "rediss://redis-dev-01-chlpid.serverless.use1.cache.amazonaws.com:6379" | base64
 
