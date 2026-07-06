@@ -97,4 +97,9 @@ spec:
             secretKeyRef:
               key: AWS_SECRET_ACCESS_KEY
               name: analytics-service-aws-secret
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SESSION_TOKEN
+              name: analytics-service-aws-secret
       restartPolicy: Always
