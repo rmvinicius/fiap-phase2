@@ -107,4 +107,9 @@ spec:
             secretKeyRef:
               key: AWS_SECRET_ACCESS_KEY
               name: evaluation-service-aws-secret
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: AWS_SESSION_TOKEN
+              name: evaluation-service-aws-secret
       restartPolicy: Always
