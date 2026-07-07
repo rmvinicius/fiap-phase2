@@ -236,8 +236,6 @@ minikube start --driver=docker --network=minikube-custom
 minikube image load custom-postgres:17 custom-redis:7.2 custom-dynamodb:3.3.0 \
   custom-elasticmq:1.7.1 auth-service:1.0 flag-service:1.0 \
   targeting-service:1.0 evaluation-service:1.0 analytics-service:1.0
-# montar volumes para PVs
-minikube mount /home/vinicius.mendes/Kubernetes/volumes/:/mnt/volumes
 ```
 
 Aplicar na ordem: namespaces → storageclass → postgres → redis → dynamodb → elasticmq → metrics-server → deployments/services de cada serviço → ingress (Helm) → keda (Helm) + ScaledObjects/HPA.
