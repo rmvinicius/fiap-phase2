@@ -1,145 +1,286 @@
-# Construção do ambiente no lab aws
+# ToggleMaster — Tech Challenge FIAP (Fase 2)
 
-1- Criado a estrutura de rede, dividindo em subnets para eks, postgres, redis e demais serviços
-2- Criar security groups para externo e interno, no sg externo, permiti acesso a subnet do ec2, no qual foi provisionada uma maquina para administrar o cluster
-3- Criar as route table, separando externo e interno também
-4- Criado IGW para tráfego de entrada e saída
-5- Não foi criado NAT Gateway, devido ao custo de alocar IP publico
+Plataforma de **Feature Flags** (alternância de funcionalidades) baseada em microsserviços, com três formas de execução:
 
-# Provisionamento dos recursos
+- **docker** — orquestração local via `docker-compose`.
+- **k8s** — execução local em cluster **Minikube** (Kubernetes).
+- **eks** — implantação em produção na **AWS** (EKS + serviços gerenciados).
 
-1- Provisionado 3 instâncias RDS
-2- Provisionado um ECR
-3- Provisionado um Redis
-4- Provisionado um EKS
-  Desafio: Foi necessário adicionar nas subnets do eks, auto public ipv4
-5- Provisionado a tabela do dynamodb
+---
 
-# Configuração dos recursos
+## Visão Geral
 
-1- Na VM que será utilizada para administrar o cluster, foi obtido as credenciais da aws pelo lab, acessando o arquivo ~/.aws/credentials
-2- Configurado na VM as credenciais através do comando aws configure
-3- Configurado a conexão no cluster através do comando: aws eks update-kubeconfig --region us-east-1 --name eks-dev
+O ToggleMaster permite criar, gerenciar e avaliar *feature flags* de forma segura e escalável. O fluxo de dados é dividido em:
 
-## Configuração do postgres
+- **Caminho administrativo (cold path):** criação de chaves de API, definição de flags e regras de segmentação.
+- **Caminho quente (hot path):** avaliação da flag por parte dos clientes finais, otimizada com cache em Redis e envio assíncrono de eventos para uma fila.
+- **Caminho analítico:** um *worker* consome a fila e persiste os eventos em um banco NoSQL para análise.
 
-## auth_db
+### Fluxo de ponta a ponta
 
-export RDSHOST01="database-dev-01.cnyn2rd2lout.us-east-1.rds.amazonaws.com" 
-psql "host=$RDSHOST01 port=5432 dbname=postgres user=postgres"
+```
+auth-service ──valida chave──▶ flag-service / targeting-service
+                                        │
+evaluation-service ◀── busca flag+regra (cache Redis) ──┘
+        │
+        ├─ retorna true/false ao cliente (hot path)
+        └─ publica EvaluationEvent na fila SQS/ElasticMQ
+                                        │
+analytics-service ◀── consome fila ─────┘
+        │
+        └─ grava evento no DynamoDB (analytics)
+```
 
-CREATE DATABASE auth_db;
-\c auth_db;
-CREATE USER auth_service WITH PASSWORD 'auth_service@2026';
-GRANT ALL PRIVILEGES ON DATABASE auth_db TO auth_service;
-ALTER DATABASE auth_db OWNER TO auth_service;
-ALTER SCHEMA public OWNER TO auth_service;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO auth_service;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO auth_service;
+### Tecnologias
 
-## flags_db
+| Camada | Tecnologia |
+| ------ | ---------- |
+| Linguagens | Go (auth, evaluation), Python/Flask (flag, targeting, analytics) |
+| Banco relacional | PostgreSQL 17 (uma base por serviço) |
+| Cache | Redis 7.2 |
+| Fila (mensageria) | AWS SQS (nuvem) / ElasticMQ (local, compatível com SQS) |
+| Banco analítico | AWS DynamoDB (nuvem) / DynamoDB Local (local) |
+| Orquestração | Docker Compose / Kubernetes (Minikube) / AWS EKS |
+| Ingress | NGINX Ingress Controller (Helm) |
+| Escalabilidade | HPA (CPU/memória) + KEDA (escala orientada por fila SQS) |
+| Registry (AWS) | Amazon ECR |
 
-export RDSHOST02="database-dev-02.cnyn2rd2lout.us-east-1.rds.amazonaws.com" 
-psql "host=$RDSHOST02 port=5432 dbname=postgres user=postgres"
+---
 
-CREATE DATABASE flags_db;
-\c flags_db;
-CREATE USER flag_service WITH PASSWORD 'flag_service2026';
-GRANT ALL PRIVILEGES ON DATABASE flags_db TO flag_service;
-ALTER DATABASE flags_db OWNER TO flag_service;
-ALTER SCHEMA public OWNER TO flag_service;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO flag_service;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO flag_service;
+## Microserviços
 
-## targeting_db
+### 1. `auth-service` (Go)
+Serviço de **autenticação**. Cria e valida chaves de API (`tm_key_...`) usadas por todos os demais serviços.
+- Banco: `auth_db` (PostgreSQL)
+- Porta: `8001`
+- Principais endpoints:
+  - `GET /health` — health check
+  - `POST /admin/keys` — cria chave de API (requer `MASTER_KEY` no `Authorization: Bearer`)
+  - `GET /validate` — valida a chave informada no header `Authorization`
 
-export RDSHOST03="database-dev-03.cnyn2rd2lout.us-east-1.rds.amazonaws.com"
-psql "host=$RDSHOST03 port=5432 dbname=postgres user=postgres"
+### 2. `flag-service` (Python/Flask)
+CRUD das **definições** das feature flags. Protegido — toda requisição (exceto `/health`) exige `Authorization: Bearer <api-key>`.
+- Banco: `flags_db` (PostgreSQL)
+- Porta: `8002`
+- Dependência: `auth-service`
+- Principais endpoints:
+  - `GET /health`
+  - `GET/POST /flags` — lista / cria flag
+  - `PUT /flags/<name>` — atualiza flag
 
-CREATE DATABASE targeting_db;
-\c targeting_db;
-CREATE USER targeting_service WITH PASSWORD 'targeting_service2026';
-GRANT ALL PRIVILEGES ON DATABASE targeting_db TO targeting_service;
-ALTER DATABASE targeting_db OWNER TO targeting_service;
-ALTER SCHEMA public OWNER TO targeting_service;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO targeting_service;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO targeting_service;
+### 3. `targeting-service` (Python/Flask)
+Gerencia **regras de segmentação** (ex.: "50% dos usuários", "país X") de uma flag específica. Protegido por API key.
+- Banco: `targeting_db` (PostgreSQL)
+- Porta: `8003`
+- Dependência: `auth-service`
+- Principais endpoints:
+  - `GET /health`
+  - `GET/POST /rules` — busca / cria regra
+  - `PUT /rules/<flag_name>` — atualiza regra (`type: PERCENTAGE`, `value: 0-100`)
 
+### 4. `evaluation-service` (Go)
+O **hot path**: único endpoint chamado pelos clientes finais. Avalia a flag para um `user_id` usando cache Redis (TTL curto) e publica o evento da decisão na fila **SQS** de forma assíncrona.
+- Porta: `8004`
+- Dependências: `auth-service`, `flag-service`, `targeting-service`, `redis`, fila (SQS/ElasticMQ)
+- Endpoint:
+  - `GET /health`
+  - `GET /evaluate?user_id=...&flag_name=...` → `{"flag_name":..., "user_id":..., "result": true|false}`
+- Escalabilidade: **HPA** por CPU e memória (1–5 réplicas).
 
-# Configuração autenticação no ECR pela maquina linux para fazer build das imagens
+### 5. `analytics-service` (Python/Flask)
+*Worker* de **análise** (sem API pública além de `/health`). Consome continuamente a fila SQS e grava os eventos na tabela `ToggleMasterAnalytics` do **DynamoDB**.
+- Porta: `8005` (somente health check)
+- Dependências: fila SQS, DynamoDB
+- Tabela DynamoDB esperada: `ToggleMasterAnalytics` (partition key `event_id` do tipo String)
+- Escalabilidade: **KEDA** orientado pelo comprimento da fila SQS (0–5 réplicas, `queueLength: 5`).
 
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 076892642827.dkr.ecr.us-east-1.amazonaws.com
+---
 
-docker build -t toggle-master/auth-service:1.0 .
-docker tag toggle-master/auth-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/auth-service:1.0
-docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/auth-service:1.0
+## Infraestrutura de Suporte
 
-docker build -t toggle-master/targeting-service:1.0 .
-docker tag toggle-master/targeting-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/targeting-service:1.0
-docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/targeting-service:1.0
+| Componente | Docker | k8s (Minikube) | EKS (AWS) |
+| ---------- | ------ | -------------- | --------- |
+| PostgreSQL (auth/flags/targeting) | contêiner `custom-postgres:17` | Stateful/Deployment + PV/PVC por base | **Amazon RDS** (3 instâncias) |
+| Redis (cache) | contêiner `custom-redis:7.2` | `StatefulSet` + PVC | **ElastiCache (Redis OSS)** |
+| DynamoDB (analytics) | `custom-dynamodb:3.3.0` (local) | Deployment + PVC | **Amazon DynamoDB** (tabela gerenciada) |
+| Fila SQS | `custom-elasticmq:1.7.1` (compatível SQS) | Deployment + PVC | **Amazon SQS** (fila gerenciada) |
 
-docker build -t toggle-master/flag-service:1.0 .
-docker tag toggle-master/flag-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flag-service:1.0
-docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/flag-service:1.0
+> No EKS, os componentes de dados são **serviços gerenciados da AWS**; por isso a pasta `eks/` contém apenas os manifestos de *namespace*, *ingress* e *keda*, enquanto os manifestos por serviço ficam em `ms/<service>/eks/`.
 
-docker build -t toggle-master/analytics-service:1.0 .
-docker tag toggle-master/analytics-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/analytics-service:1.0
-docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/analytics-service:1.0
+---
 
-docker build -t toggle-master/evaluation-service:1.0 .
-docker tag toggle-master/evaluation-service:1.0 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/evaluation-service:1.0
-docker push 076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/evaluation-service:1.0
+## Estrutura de Pastas
 
-# Aplicação dos scripts sql nas bases
+### `docker/` — Docker Compose (local)
+Imagens customizadas construídas a partir dos `Dockerfile`s auxiliares e do `docker-compose.yaml` que sobe todos os serviços e dependências em uma rede bridge `fase2`.
 
-psql "host=$RDSHOST01 port=5432 dbname=auth_db user=auth_service" -f init.sql
-psql "host=$RDSHOST02 port=5432 dbname=flags_db user=flag_service" -f init.sql
-psql "host=$RDSHOST03 port=5432 dbname=targeting_db user=targeting_service" -f init.sql
+```
+docker/
+├── docker-compose.yaml        # orquestra todos os serviços + dependências
+├── postgres/
+│   └── Dockerfile             # custom-postgres:17
+├── redis/
+│   └── Dockerfile             # custom-redis:7.2
+├── dynamodb/
+│   └── Dockerfile             # custom-dynamodb:3.3.0
+└── sqs/
+    └── Dockerfile             # custom-elasticmq:1.7.1
+```
 
-# Configurar ECR no EKS
-aws eks update-kubeconfig --region us-east-1 --name eks-dev-01
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 076892642827.dkr.ecr.us-east-1.amazonaws.com
-kubectl create secret docker-registry ecr-secret --docker-server=076892642827.dkr.ecr.us-east-1.amazonaws.com --docker-username=AWS --docker-password=$(aws ecr get-login-password --region us-east-1)
+Serviços e portas expostas no compose: `auth-service:8001`, `flag-service:8002`, `targeting-service:8003`, `evaluation-service:8004`, `analytics-service:8005`, `dynamodb:8000`, `elasticmq:9324/9325`, `redis:6379`, além dos Postgres em `5439/5440/5441`.
 
-# Aplicar deployments do cluster
-kubectl apply -f eks/deployment.yaml
-kubectl apply -f eks/service.yaml
+### `k8s/` — Minikube (Kubernetes local)
+Manifestos divididos por componente/namespace. Usa `StorageClass` + PV/PVC locais (`minikube mount`) para persistência.
 
-# Configurar redis
+```
+k8s/
+├── namespace/namespace.yaml        # namespaces: postgres, redis, dynamodb, elasticmq, application
+├── storageclass/storageclass.yaml  # StorageClass local para PVs
+├── postgres/
+│   ├── auth-service-db/            # configmap, secret, deployment, pv, pvc
+│   ├── flag-service-db/
+│   └── targeting-service-db/
+├── redis/
+│   ├── configmap.yaml              # redis.conf
+│   ├── stateful.yaml               # StatefulSet redis
+│   ├── pv.yaml / pvc.yaml
+│   └── service.yaml
+├── dynamodb/
+│   ├── deployment.yaml / service.yaml / pv.yaml / pvc.yaml
+├── elasticmq/
+│   ├── deployment.yaml / service.yaml / pv.yaml / pvc.yaml
+├── ingress/
+│   ├── ingress.md                  # comandos helm do ingress-nginx
+│   ├── values.yaml                 # valores do chart ingress-nginx
+│   ├── ingress.yaml                # roteamento /auth /flags /targeting /evaluation /analytics
+│   └── route.yaml                  # Services ExternalName ponteando para o namespace application
+├── keda/
+│   └── keda.md                     # instalação do KEDA via Helm
+├── metrics/
+│   └── metrics.yaml                # metrics-server (necessário p/ HPA por recurso)
+└── minikube.md                     # comandos de start, load de imagens e mount
+```
 
-Criado redis do tipo Redis OSS
-Necessário criar um usuário para acesso
-toggle-master:toggle-master123
+### `eks/` — AWS EKS (produção)
+Apenas os recursos de cluster que não são gerenciados pela AWS. Os deployments por serviço ficam em `ms/<service>/eks/`.
 
-## Configurar credenciais no Kubernetes
-Connection string:
+```
+eks/
+├── namespace/namespace.yaml        # mesmos namespaces do k8s
+├── ingress/
+│   ├── ingress.md                  # instalação ingress-nginx (Helm)
+│   ├── values.yaml
+│   ├── ingress.yaml                # mesmo roteamento de paths do k8s
+│   └── route.yaml                  # ExternalName services
+└── keda/
+    └── keda.md                     # instalação KEDA (Helm)
+```
 
-echo -n "rediss://redis-dev-01-chlpid.serverless.use1.cache.amazonaws.com:6379" | base64
+### `ms/` — Código e manifestos dos microsserviços
+Cada serviço contém seu código-fonte, `Dockerfile`, `.env` de exemplo e duas subpastas de manifestos: `k8s/` (Minikube) e `eks/` (AWS).
 
+```
+ms/
+├── auth-service/         (Go)
+│   ├── main.go, handlers.go, key.go, go.mod
+│   ├── db/init.sql
+│   ├── k8s/   (configmap, secret, deployment, service)
+│   └── eks/   (configmap, secret, deployment, service)
+├── flag-service/         (Python)
+│   ├── app.py, requirements.txt, db/init.sql
+│   ├── k8s/   (configmap, secret, deployment, service)
+│   └── eks/   (configmap, secret, deployment, service)
+├── targeting-service/    (Python)
+│   ├── app.py, requirements.txt, db/init.sql
+│   ├── k8s/   (configmap, secret, deployment, service)
+│   └── eks/   (configmap, secret, deployment, service)
+├── evaluation-service/   (Go)
+│   ├── main.go, handlers.go, evaluator.go, sqs.go, types.go
+│   ├── k8s/   (configmap, secret, deployment, service, hpa)
+│   └── eks/   (configmap, secret, deployment, service, hpa)
+└── analytics-service/    (Python)
+    ├── app.py, requirements.txt
+    ├── k8s/   (configmap, secret, deployment, service, keda)
+    └── eks/   (configmap, secret, deployment, service, keda)
+```
 
+**Diferenças k8s × eks nos manifestos de serviço:**
+- **Imagem:** no `k8s/` usa imagens locais (`auth-service:1.0`); no `eks/` usa imagens do ECR (`076892642827.dkr.ecr.us-east-1.amazonaws.com/toggle-master/<svc>:1.0`).
+- **Endpoints de nuvem:** no `eks/` as URLs de SQS/DynamoDB/Redis apontam para os serviços gerenciados da AWS; no `k8s/` apontam para os serviços internos do cluster (ex.: `elasticmq-svc.elasticmq.svc.cluster.local:9324`).
+- **Segredos AWS:** no `eks/` os Secrets incluem credenciais reais da AWS (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`); no `k8s/` usam credenciais locais (`local`).
 
-# checklist
+---
 
-1- Subir nat gateway
-2- Subir o node no eks
-3- Provisionar redis do tipo redis-oss nome: redis-dev-01
-4- Subir o ingress no eks
-5- Atualizar as credenciais da aws nas secrets dos ms e keda
-6- Ativar postgres
+## Escalabilidade
 
-# Entregaveis
+- **`evaluation-service` — HPA:** escala de 1 a 5 réplicas com base em **CPU (80%)** e **memória (80%)**. Requer o `metrics-server` (instalado pelo `k8s/metrics/metrics.yaml`).
+- **`analytics-service` — KEDA:** `ScaledObject` tipo `aws-sqs-queue` escala de **0 a 5 réplicas** conforme o número de mensagens na fila (`queueLength: 5`, `pollingInterval: 10s`, `cooldownPeriod: 30s`). Usa `TriggerAuthentication` referenciando um Secret com as credenciais AWS.
 
-Vídeo demonstrativo de 20min:
+---
 
-- Mostrar docker compose funcionando
-- Mostrar o acesso ao cluster EKS e serviços em execução
-- Mostrar os pods funcionando
-- Mostrar nginx ingress funcionando
-- Gerar carga no evaluation-service e mostrar escalabilidade
-- Mostrar o KEDA para o analytics-service
-- Mostrar os dados aparecendo na tabela do dynamodb
-- Faça uma breve explicação da arquitetura e desafios encontrados
-- Explicar como implementou a escalabilidade para o analytics-service
-- Explique a diferença entre RDS, ElastiCache e DynamoDB
+## Como Executar
 
+### 1. Docker Compose
+Na pasta `docker/`, após construir as imagens customizadas (`postgres`, `redis`, `dynamodb`, `sqs`) e as imagens dos serviços:
 
+```bash
+cd docker
+docker compose up -d
+```
+
+### 2. Kubernetes local (Minikube)
+Consulte `k8s/minikube.md`:
+```bash
+minikube start --driver=docker --network=minikube-custom
+# carregar imagens
+minikube image load custom-postgres:17 custom-redis:7.2 custom-dynamodb:3.3.0 \
+  custom-elasticmq:1.7.1 auth-service:1.0 flag-service:1.0 \
+  targeting-service:1.0 evaluation-service:1.0 analytics-service:1.0
+# montar volumes para PVs
+minikube mount /home/vinicius.mendes/Kubernetes/volumes/:/mnt/volumes
+```
+
+Aplicar na ordem: namespaces → storageclass → postgres → redis → dynamodb → elasticmq → metrics-server → deployments/services de cada serviço → ingress (Helm) → keda (Helm) + ScaledObjects/HPA.
+
+### 3. AWS EKS
+Provisionar a infra na AWS (VPC/subnets, RDS, ElastiCache, DynamoDB, SQS, ECR, EKS) conforme `TODO.md`. Build/push das imagens para o ECR e aplicar:
+```bash
+aws eks update-kubeconfig --region us-east-1 --name eks-dev
+# secrets de pull do ECR
+kubectl create secret docker-registry ecr-secret \
+  --docker-server=076892642827.dkr.ecr.us-east-1.amazonaws.com \
+  --docker-username=AWS \
+  --docker-password=$(aws ecr get-login-password --region us-east-1)
+# namespaces, ingress, keda e os manifestos em ms/<svc>/eks/
+kubectl apply -f eks/namespace/namespace.yaml
+kubectl apply -f ms/auth-service/eks/
+# ... demais serviços
+```
+
+---
+
+## Variáveis de Ambiente (resumo)
+
+| Serviço | Variáveis principais |
+| ------- | -------------------- |
+| auth-service | `DATABASE_URL`, `PORT`, `MASTER_KEY` |
+| flag-service | `DATABASE_URL`, `PORT`, `AUTH_SERVICE_URL` |
+| targeting-service | `DATABASE_URL`, `PORT`, `AUTH_SERVICE_URL` |
+| evaluation-service | `PORT`, `REDIS_URL`, `FLAG_SERVICE_URL`, `TARGETING_SERVICE_URL`, `SERVICE_API_KEY`, `AWS_SQS_URL`, `AWS_SQS_ENDPOINT`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| analytics-service | `PORT`, `AWS_SQS_URL`, `AWS_SQS_ENDPOINT`, `AWS_DYNAMODB_TABLE`, `AWS_DYNAMODB_ENDPOINT`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` |
+
+Consulte os `README.md` de cada serviço em `ms/<service>/README.md` para exemplos completos e testes de endpoints.
+
+---
+
+## Roteamento (Ingress)
+
+O NGINX Ingress expõe os serviços pela mesma porta, com *rewrite* de path:
+
+| Path | Serviço | Porta |
+| ---- | ------- | ----- |
+| `/auth` | auth-service | 8001 |
+| `/flags` | flag-service | 8002 |
+| `/targeting` | targeting-service | 8003 |
+| `/evaluation` | evaluation-service | 8004 |
+| `/analytics` | analytics-service | 8005 |
