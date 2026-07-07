@@ -127,3 +127,19 @@ echo -n "rediss://redis-dev-01-chlpid.serverless.use1.cache.amazonaws.com:6379" 
 5- Atualizar as credenciais da aws nas secrets dos ms e keda
 6- Ativar postgres
 
+# Entregaveis
+
+Vídeo demonstrativo de 20min:
+
+- Mostrar docker compose funcionando
+- Mostrar o acesso ao cluster EKS e serviços em execução
+- Mostrar os pods funcionando
+- Mostrar nginx ingress funcionando
+- Gerar carga no evaluation-service e mostrar escalabilidade
+- Mostrar o KEDA para o analytics-service
+- Mostrar os dados aparecendo na tabela do dynamodb
+- Faça uma breve explicação da arquitetura e desafios encontrados
+- Explicar como implementou a escalabilidade para o analytics-service
+- Explique a diferença entre RDS, ElastiCache e DynamoDB
+
+
